@@ -61,11 +61,14 @@
     transition: transform 0.1s;
   }
   .btn-grande:active { transform: scale(0.96); }
+  .btn-grande.btn-azul { background: var(--azul); margin-top: 10px; }
+  .descripcion-modo { font-size: 0.95em; margin-top: 6px; color: #666; max-width: 380px; }
   #best-score {
     margin-top: 18px;
     font-size: 1.1em;
     color: var(--azul);
     font-weight: bold;
+    line-height: 1.6;
   }
 
   /* ---------- Pantalla de juego ---------- */
@@ -123,7 +126,30 @@
   #mensaje.fallo { color: var(--rojo); }
   #mensaje.revelado { color: var(--naranja); }
 
-  #map { flex: 1; }
+  #map { flex: 1; min-height: 0; }
+
+  #opciones-respuesta {
+    display: none;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 10px 12px 14px;
+    background: white;
+    border-top: 2px solid var(--azul);
+  }
+  .btn-opcion {
+    font-size: 1.05em;
+    padding: 14px 8px;
+    border: 2px solid var(--azul);
+    border-radius: 10px;
+    background: white;
+    color: var(--texto);
+    cursor: pointer;
+    font-weight: bold;
+  }
+  .btn-opcion:active { transform: scale(0.97); }
+  .btn-opcion:disabled { cursor: default; }
+  .btn-opcion.correcta { background: var(--verde); color: white; border-color: var(--verde); }
+  .btn-opcion.incorrecta { background: #fbdcdc; color: var(--rojo); border-color: var(--rojo); text-decoration: line-through; }
 
   /* ---------- Pantalla final ---------- */
   #end-screen { display: none; }
@@ -182,11 +208,13 @@
 
 <div id="start-screen">
   <h1>¿Dónde está?</h1>
-  <p>Un juego para aprender los 78 concejos de Asturias.<br>
-  Te iremos diciendo un nombre y tienes que señalarlo en el mapa.<br>
+  <p>Dos formas de aprender los 78 concejos de Asturias.<br>
   Tienes <strong>3 intentos</strong> por concejo: cuanto antes aciertes, más puntos consigues.</p>
   <div id="best-score"></div>
-  <button class="btn-grande" id="btn-empezar">Empezar a jugar</button>
+  <button class="btn-grande" id="btn-modo-mapa">Señala en el mapa</button>
+  <p class="descripcion-modo">Te decimos el nombre y tú lo buscas en el mapa.</p>
+  <button class="btn-grande btn-azul" id="btn-modo-nombre">Adivina el nombre</button>
+  <p class="descripcion-modo">Se ilumina un concejo y eliges su nombre entre 4 opciones.</p>
 </div>
 
 <div id="game-screen">
@@ -196,9 +224,10 @@
     <div class="puntuacion" id="puntuacion">Puntos: 0</div>
     <button id="btn-rendirse">Rendirse</button>
   </div>
-  <div id="pregunta">Busca: <span id="nombre-actual">—</span></div>
+  <div id="pregunta"></div>
   <div id="mensaje"></div>
   <div id="map"></div>
+  <div id="opciones-respuesta"></div>
 </div>
 
 <div id="end-screen">
@@ -214,6 +243,8 @@
   "use strict";
 
   const CAPITALES_CONCEJOS = {"Aller":{"capital":"Cabanaquinta/Cabañaquinta","lat":43.16179,"lon":-5.62387},"Allande":{"capital":"Pola de Allande","lat":43.27195,"lon":-6.61095},"Amieva":{"capital":"Sames","lat":43.26981,"lon":-5.12932},"Avilés":{"capital":"Avilés","lat":43.55569,"lon":-5.922},"Belmonte de Miranda":{"capital":"Belmonte/Balmonte","lat":43.28197,"lon":-6.21809},"Bimenes":{"capital":"Martimporra","lat":43.33055,"lon":-5.56589},"Boal":{"capital":"Bual","lat":43.42824,"lon":-6.81889},"Cabrales":{"capital":"Carreña","lat":43.31751,"lon":-4.84585},"Cabranes":{"capital":"Santolaya","lat":43.41672,"lon":-5.41068},"Candamo":{"capital":"Grullos","lat":43.43606,"lon":-6.05904},"Cangas del Narcea":{"capital":"Cangas del Narcea","lat":43.17722,"lon":-6.55206},"Cangas de Onís":{"capital":"Cangues d'Onís/Cangas de Onís","lat":43.35113,"lon":-5.12811},"Caravia":{"capital":"Caravia l'Alta/Prado","lat":43.46273,"lon":-5.18696},"Carreño":{"capital":"Candás","lat":43.59049,"lon":-5.76556},"Castrillón":{"capital":"Piedrasblancas","lat":43.5596,"lon":-5.97712},"Castropol":{"capital":"Castropol","lat":43.52748,"lon":-7.03049},"Colunga":{"capital":"Colunga","lat":43.4853,"lon":-5.27016},"Caso":{"capital":"El Campu","lat":43.18261,"lon":-5.34627},"Coaña":{"capital":"Cuaña","lat":43.51405,"lon":-6.75325},"Corvera de Asturias":{"capital":"Nubledo/Nubleo","lat":43.52195,"lon":-5.87034},"Cudillero":{"capital":"Cudillero","lat":43.56292,"lon":-6.14543},"Degaña":{"capital":"Degaña","lat":42.94098,"lon":-6.57343},"El Franco":{"capital":"A Caridá","lat":43.55103,"lon":-6.82895},"Grado":{"capital":"Grau/Grado","lat":43.3886,"lon":-6.07021},"Grandas de Salime":{"capital":"Grandas de Salime","lat":43.21796,"lon":-6.8759},"Ibias":{"capital":"San Antolín","lat":43.03804,"lon":-6.87329},"Gijón":{"capital":"Gijón/Xixón","lat":43.545,"lon":-5.66263},"Gozón":{"capital":"Lluanco/Luanco","lat":43.61581,"lon":-5.79284},"Illano":{"capital":"Eilao","lat":43.33339,"lon":-6.8644},"Illas":{"capital":"La Caizuela","lat":43.49542,"lon":-5.96919},"Langreo":{"capital":"Llangréu/Langreo","lat":43.29556,"lon":-5.68393},"Laviana":{"capital":"La Pola Llaviana/Pola de Laviana","lat":43.24549,"lon":-5.56292},"Lena":{"capital":"La Pola","lat":43.15943,"lon":-5.8289},"Valdés":{"capital":"Luarca/L.luarca","lat":43.54393,"lon":-6.53576},"Nava":{"capital":"Nava","lat":43.35839,"lon":-5.50611},"Navia":{"capital":"Navia","lat":43.53906,"lon":-6.72265},"Llanera":{"capital":"Posada","lat":43.43966,"lon":-5.85084},"Llanes":{"capital":"Llanes","lat":43.42035,"lon":-4.75475},"Mieres":{"capital":"Mieres del Camín","lat":43.25089,"lon":-5.77654},"Morcín":{"capital":"Santolaya","lat":43.28098,"lon":-5.87713},"Muros de Nalón":{"capital":"Muros de Nalón","lat":43.5422,"lon":-6.1047},"Onís":{"capital":"Benia","lat":43.33472,"lon":-4.96904},"Noreña":{"capital":"Noreña","lat":43.39289,"lon":-5.70697},"Oviedo":{"capital":"Oviedo/Uviéu","lat":43.36047,"lon":-5.84495},"Parres":{"capital":"Arriondas/Les Arriondes","lat":43.38984,"lon":-5.18421},"Pesoz":{"capital":"Pezós/Pesoz","lat":43.25686,"lon":-6.8758},"Peñamellera Alta":{"capital":"Alles","lat":43.33306,"lon":-4.70533},"Peñamellera Baja":{"capital":"Panes","lat":43.32342,"lon":-4.58399},"Piloña":{"capital":"L'Infiestu","lat":43.34781,"lon":-5.36407},"Ponga":{"capital":"San Xuan/San Juan de Beleño","lat":43.19,"lon":-5.16379},"Pravia":{"capital":"Pravia","lat":43.4891,"lon":-6.11179},"Proaza":{"capital":"Proaza","lat":43.25143,"lon":-6.01648},"Quirós":{"capital":"Bárzana","lat":43.15919,"lon":-5.97252},"Las Regueras":{"capital":"Santuyanu","lat":43.41465,"lon":-5.96943},"Ribadedeva":{"capital":"Colombres","lat":43.37475,"lon":-4.54314},"Ribadesella":{"capital":"Ribadesella/Ribeseya","lat":43.46199,"lon":-5.05752},"Ribera de Arriba":{"capital":"Soto Ribera","lat":43.30908,"lon":-5.87716},"Riosa":{"capital":"La Vega","lat":43.23073,"lon":-5.88098},"Santa Eulalia de Oscos":{"capital":"Santalla","lat":43.25927,"lon":-7.01975},"Salas":{"capital":"Salas","lat":43.4093,"lon":-6.26069},"San Martín del Rey Aurelio":{"capital":"Sotrondio","lat":43.27539,"lon":-5.60463},"San Martín de Oscos":{"capital":"Samartín","lat":43.26565,"lon":-6.96138},"Santo Adriano":{"capital":"Villanueva","lat":43.27372,"lon":-5.99984},"Sariego":{"capital":"Vega","lat":43.41056,"lon":-5.55813},"San Tirso de Abres":{"capital":"O Chao","lat":43.40928,"lon":-7.14332},"Siero":{"capital":"La Pola Siero","lat":43.3912,"lon":-5.661},"Sobrescobio":{"capital":"Rusecu/Rioseco","lat":43.22084,"lon":-5.45433},"Somiedo":{"capital":"La Pola Somiedo","lat":43.09253,"lon":-6.25594},"Tapia de Casariego":{"capital":"Tapia","lat":43.57,"lon":-6.94403},"Soto del Barco":{"capital":"Sotu","lat":43.53266,"lon":-6.07179},"Taramundi":{"capital":"Taramundi","lat":43.36069,"lon":-7.10748},"Teverga":{"capital":"La Plaza","lat":43.15846,"lon":-6.10332},"Tineo":{"capital":"Tinéu","lat":43.33531,"lon":-6.41507},"Vegadeo":{"capital":"A Veiga/Vegadeo","lat":43.46437,"lon":-7.04988},"Villanueva de Oscos":{"capital":"Vilanova","lat":43.31212,"lon":-6.98661},"Villaviciosa":{"capital":"Villaviciosa","lat":43.48134,"lon":-5.43438},"Villayón":{"capital":"Villayón","lat":43.4477,"lon":-6.70439},"Yernes y Tameza":{"capital":"Villabre","lat":43.25132,"lon":-6.12798}};
+
+  const CANDIDATOS_VECINOS = {"Allande":["Cangas del Narcea","Grandas de Salime","Ibias","Illano","Pesoz","Tineo","Villayón"],"Aller":["Caso","Laviana","Lena","Mieres","Sobrescobio"],"Amieva":["Cangas de Onís","Parres","Ponga","Llanes","Onís","Ribadesella","Caravia","Colunga","Piloña","Caso"],"Avilés":["Castrillón","Corvera de Asturias","Gozón","Candamo","Illas","Soto del Barco","Carreño","Gijón","Llanera"],"Belmonte de Miranda":["Grado","Salas","Somiedo","Teverga","Tineo"],"Bimenes":["Laviana","Nava","San Martín del Rey Aurelio","Siero","Aller","Mieres","Piloña","Sobrescobio","Cabranes","Sariego","Villaviciosa","Langreo","Gijón","Llanera","Noreña","Oviedo"],"Boal":["Castropol","Coaña","El Franco","Illano","Villanueva de Oscos","Villayón"],"Cabrales":["Llanes","Onís","Peñamellera Alta","Cangas de Onís","Peñamellera Baja","Ribadedeva","Ribadesella"],"Cabranes":["Nava","Piloña","Sariego","Villaviciosa","Bimenes","Laviana","Siero","Caso","Colunga","Parres","Ponga","Sobrescobio","Gijón"],"Candamo":["Castrillón","Grado","Illas","Pravia","Las Regueras","Salas","Soto del Barco"],"Cangas del Narcea":["Allande","Degaña","Ibias","Somiedo","Tineo"],"Cangas de Onís":["Amieva","Llanes","Onís","Parres","Ribadesella"],"Caravia":["Colunga","Parres","Ribadesella","Piloña","Villaviciosa","Amieva","Cangas de Onís","Ponga","Llanes"],"Carreño":["Corvera de Asturias","Gijón","Gozón","Avilés","Castrillón","Illas","Llanera","Sariego","Siero","Villaviciosa"],"Caso":["Aller","Piloña","Ponga","Sobrescobio","Laviana","Lena","Mieres","Cabranes","Colunga","Nava","Parres","Villaviciosa","Amieva"],"Castrillón":["Avilés","Candamo","Corvera de Asturias","Illas","Soto del Barco"],"Castropol":["Boal","El Franco","Tapia de Casariego","Vegadeo","Villanueva de Oscos"],"Coaña":["Boal","El Franco","Navia","Villayón","Castropol","Illano","Villanueva de Oscos","Tapia de Casariego","Valdés","Allande","Tineo"],"Colunga":["Caravia","Parres","Piloña","Villaviciosa","Ribadesella","Amieva","Cangas de Onís","Ponga","Cabranes","Caso","Laviana","Nava","Sobrescobio","Gijón","Sariego","Siero"],"Corvera de Asturias":["Avilés","Carreño","Castrillón","Gijón","Gozón","Illas","Llanera"],"Cudillero":["Valdés","Muros de Nalón","Pravia","Salas","Navia","Tineo","Villayón","Soto del Barco","Candamo","Belmonte de Miranda","Grado"],"Degaña":["Cangas del Narcea","Ibias","Allande","Somiedo","Tineo"],"El Franco":["Boal","Castropol","Coaña","Tapia de Casariego","Illano","Villanueva de Oscos","Villayón","Vegadeo","Navia"],"Gijón":["Carreño","Corvera de Asturias","Llanera","Sariego","Siero","Villaviciosa"],"Gozón":["Avilés","Carreño","Corvera de Asturias","Castrillón","Gijón","Illas","Llanera"],"Grado":["Belmonte de Miranda","Candamo","Oviedo","Proaza","Las Regueras","Salas","Santo Adriano","Teverga","Yernes y Tameza"],"Grandas de Salime":["Allande","Pesoz","San Martín de Oscos","Santa Eulalia de Oscos","Cangas del Narcea","Ibias","Illano","Tineo","Villayón","Villanueva de Oscos","Taramundi"],"Ibias":["Allande","Cangas del Narcea","Degaña","Grandas de Salime","Illano","Pesoz","Tineo","Villayón","Somiedo"],"Illano":["Allande","Boal","Pesoz","San Martín de Oscos","Villanueva de Oscos","Villayón"],"Illas":["Candamo","Castrillón","Corvera de Asturias","Llanera","Las Regueras"],"Langreo":["Mieres","Noreña","Oviedo","San Martín del Rey Aurelio","Siero"],"Laviana":["Aller","Bimenes","Mieres","Nava","Piloña","San Martín del Rey Aurelio","Sobrescobio"],"Lena":["Aller","Mieres","Quirós","Riosa","Caso","Laviana","Sobrescobio","Langreo","Morcín","Oviedo","Ribera de Arriba","San Martín del Rey Aurelio","Proaza","Santo Adriano","Teverga"],"Valdés":["Cudillero","Navia","Salas","Tineo","Villayón"],"Llanera":["Corvera de Asturias","Gijón","Illas","Oviedo","Las Regueras","Siero"],"Llanes":["Cabrales","Cangas de Onís","Onís","Peñamellera Alta","Peñamellera Baja","Ribadedeva","Ribadesella"],"Mieres":["Aller","Langreo","Laviana","Lena","Morcín","Oviedo","Ribera de Arriba","Riosa","San Martín del Rey Aurelio"],"Morcín":["Mieres","Quirós","Ribera de Arriba","Riosa","Santo Adriano"],"Muros de Nalón":["Cudillero","Pravia","Soto del Barco","Valdés","Salas","Candamo","Castrillón"],"Nava":["Bimenes","Cabranes","Laviana","Piloña","Sariego","Siero","Villaviciosa"],"Navia":["Coaña","Valdés","Villayón","Boal","El Franco","Cudillero","Salas","Tineo","Allande","Illano"],"Noreña":["Langreo","Siero","Mieres","Oviedo","San Martín del Rey Aurelio","Bimenes","Gijón","Llanera","Nava","Sariego","Villaviciosa"],"Onís":["Cabrales","Cangas de Onís","Llanes","Peñamellera Alta","Amieva","Parres","Ribadesella","Peñamellera Baja","Ribadedeva"],"Oviedo":["Grado","Langreo","Llanera","Mieres","Las Regueras","Ribera de Arriba","Santo Adriano","Siero"],"Parres":["Amieva","Cangas de Onís","Caravia","Colunga","Piloña","Ponga","Ribadesella"],"Peñamellera Alta":["Cabrales","Llanes","Peñamellera Baja","Onís","Cangas de Onís","Ribadedeva","Ribadesella"],"Peñamellera Baja":["Llanes","Peñamellera Alta","Ribadedeva","Cabrales","Cangas de Onís","Onís","Ribadesella"],"Pesoz":["Allande","Grandas de Salime","Illano","San Martín de Oscos","Cangas del Narcea","Ibias","Tineo","Villayón","Santa Eulalia de Oscos","Boal","Villanueva de Oscos"],"Piloña":["Cabranes","Caso","Colunga","Laviana","Nava","Parres","Ponga","Sobrescobio","Villaviciosa"],"Ponga":["Amieva","Caso","Parres","Piloña","Cangas de Onís","Aller","Sobrescobio","Caravia","Colunga","Ribadesella","Cabranes","Laviana","Nava","Villaviciosa"],"Pravia":["Candamo","Cudillero","Muros de Nalón","Salas","Soto del Barco"],"Proaza":["Grado","Quirós","Santo Adriano","Teverga","Yernes y Tameza"],"Quirós":["Lena","Morcín","Proaza","Riosa","Santo Adriano","Teverga"],"Las Regueras":["Candamo","Grado","Illas","Llanera","Oviedo"],"Ribadedeva":["Llanes","Peñamellera Baja","Cabrales","Cangas de Onís","Onís","Peñamellera Alta","Ribadesella"],"Ribadesella":["Cangas de Onís","Caravia","Llanes","Parres","Amieva","Onís","Colunga","Cabrales","Peñamellera Alta","Peñamellera Baja","Ribadedeva","Piloña","Ponga"],"Ribera de Arriba":["Mieres","Morcín","Oviedo","Santo Adriano","Aller","Langreo","Laviana","Lena","Riosa","San Martín del Rey Aurelio","Quirós","Grado","Llanera","Las Regueras","Siero","Proaza"],"Riosa":["Lena","Mieres","Morcín","Quirós","Aller","Langreo","Laviana","Oviedo","Ribera de Arriba","San Martín del Rey Aurelio","Santo Adriano","Proaza","Teverga"],"Salas":["Belmonte de Miranda","Candamo","Cudillero","Grado","Valdés","Pravia","Tineo"],"San Martín del Rey Aurelio":["Bimenes","Langreo","Laviana","Mieres","Siero"],"San Martín de Oscos":["Grandas de Salime","Illano","Pesoz","Santa Eulalia de Oscos","Villanueva de Oscos"],"Santa Eulalia de Oscos":["Grandas de Salime","San Martín de Oscos","Taramundi","Villanueva de Oscos","Allande","Pesoz","Illano","San Tirso de Abres","Vegadeo","Boal","Castropol"],"San Tirso de Abres":["Taramundi","Vegadeo","Santa Eulalia de Oscos","Villanueva de Oscos","Castropol"],"Santo Adriano":["Grado","Morcín","Oviedo","Proaza","Quirós","Ribera de Arriba"],"Sariego":["Cabranes","Gijón","Nava","Siero","Villaviciosa"],"Siero":["Bimenes","Gijón","Langreo","Llanera","Nava","Noreña","Oviedo","San Martín del Rey Aurelio","Sariego","Villaviciosa"],"Sobrescobio":["Aller","Caso","Laviana","Piloña","Lena","Mieres","Ponga","Bimenes","Nava","San Martín del Rey Aurelio","Cabranes","Colunga","Parres","Villaviciosa"],"Somiedo":["Belmonte de Miranda","Cangas del Narcea","Teverga","Tineo","Grado","Salas","Allande","Degaña","Ibias","Proaza","Quirós","Yernes y Tameza","Valdés","Villayón"],"Soto del Barco":["Candamo","Castrillón","Muros de Nalón","Pravia","Grado","Illas","Las Regueras","Salas","Avilés","Corvera de Asturias","Cudillero"],"Tapia de Casariego":["Castropol","El Franco","Boal","Vegadeo","Villanueva de Oscos","Coaña"],"Taramundi":["Santa Eulalia de Oscos","San Tirso de Abres","Vegadeo","Villanueva de Oscos","Grandas de Salime","San Martín de Oscos","Castropol","Boal","Illano"],"Teverga":["Belmonte de Miranda","Grado","Proaza","Quirós","Somiedo","Yernes y Tameza"],"Tineo":["Allande","Belmonte de Miranda","Cangas del Narcea","Valdés","Salas","Somiedo","Villayón"],"Vegadeo":["Castropol","San Tirso de Abres","Taramundi","Villanueva de Oscos","Boal","El Franco","Tapia de Casariego","Santa Eulalia de Oscos","Illano","San Martín de Oscos"],"Villanueva de Oscos":["Boal","Castropol","Illano","San Martín de Oscos","Santa Eulalia de Oscos","Taramundi","Vegadeo"],"Villaviciosa":["Cabranes","Colunga","Gijón","Nava","Piloña","Sariego","Siero"],"Villayón":["Allande","Boal","Coaña","Illano","Valdés","Navia","Tineo"],"Yernes y Tameza":["Grado","Proaza","Teverga","Belmonte de Miranda","Candamo","Oviedo","Las Regueras","Salas","Santo Adriano","Quirós","Somiedo"]};
 
   const CONCEJOS_GEOJSON = {"type":"FeatureCollection", "features": [
 {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-6.84803,43.23643],[-6.84399,43.23384],[-6.83311,43.23148],[-6.82534,43.23069],[-6.81498,43.23051],[-6.81655,43.22616],[-6.8142,43.22625],[-6.81146,43.22824],[-6.80461,43.22875],[-6.80192,43.23087],[-6.7985,43.22928],[-6.7955,43.23208],[-6.7919,43.22821],[-6.78655,43.22599],[-6.78727,43.22157],[-6.78607,43.21207],[-6.79026,43.20426],[-6.80562,43.201],[-6.81925,43.20819],[-6.82568,43.19981],[-6.82816,43.18939],[-6.8309,43.18551],[-6.83301,43.17287],[-6.83672,43.1675],[-6.83891,43.16614],[-6.83732,43.16354],[-6.83675,43.1573],[-6.82956,43.15136],[-6.82695,43.14826],[-6.82628,43.14581],[-6.82212,43.14333],[-6.82479,43.14008],[-6.82392,43.13704],[-6.82746,43.12805],[-6.8284,43.12408],[-6.83471,43.11833],[-6.84101,43.11529],[-6.83316,43.11803],[-6.82444,43.11477],[-6.8231,43.11145],[-6.81535,43.10915],[-6.81105,43.11013],[-6.80543,43.10531],[-6.80171,43.10405],[-6.79467,43.09932],[-6.79174,43.09952],[-6.78705,43.10125],[-6.78543,43.10744],[-6.78185,43.11169],[-6.77158,43.11509],[-6.76587,43.11432],[-6.7589,43.11489],[-6.75145,43.11711],[-6.74772,43.11695],[-6.74358,43.12025],[-6.7393,43.12159],[-6.73769,43.12338],[-6.73368,43.12462],[-6.73183,43.12745],[-6.73405,43.1324],[-6.73953,43.14011],[-6.74328,43.14212],[-6.74264,43.1467],[-6.73705,43.15255],[-6.73733,43.15537],[-6.73639,43.16174],[-6.73293,43.16608],[-6.73263,43.16914],[-6.72302,43.17736],[-6.72541,43.18093],[-6.72639,43.18572],[-6.72334,43.19082],[-6.72029,43.19257],[-6.71822,43.19947],[-6.71326,43.20008],[-6.71125,43.19554],[-6.71125,43.19325],[-6.70848,43.1914],[-6.70617,43.19581],[-6.70212,43.19885],[-6.6986,43.20004],[-6.69538,43.20239],[-6.68933,43.20326],[-6.68158,43.20556],[-6.67693,43.20585],[-6.67098,43.20491],[-6.66807,43.2033],[-6.66153,43.202],[-6.65366,43.20301],[-6.65182,43.20165],[-6.64388,43.19947],[-6.63761,43.2],[-6.6315,43.19855],[-6.62726,43.19869],[-6.62532,43.19584],[-6.62585,43.19387],[-6.62199,43.19076],[-6.61801,43.19215],[-6.6154,43.19186],[-6.61405,43.19412],[-6.60937,43.19531],[-6.60455,43.19368],[-6.59763,43.19487],[-6.59612,43.19848],[-6.58609,43.20118],[-6.57796,43.20296],[-6.57509,43.20705],[-6.57611,43.20979],[-6.57324,43.21015],[-6.57242,43.20482],[-6.56885,43.19848],[-6.56699,43.19998],[-6.5623,43.20115],[-6.5595,43.20577],[-6.55622,43.20715],[-6.55077,43.20761],[-6.55137,43.21328],[-6.54979,43.21591],[-6.55215,43.21937],[-6.55184,43.22303],[-6.54825,43.22591],[-6.53948,43.23021],[-6.53084,43.23623],[-6.53703,43.24176],[-6.54086,43.24432],[-6.55509,43.24313],[-6.5556,43.24577],[-6.56551,43.24922],[-6.56833,43.2511],[-6.57042,43.25434],[-6.57274,43.25594],[-6.57492,43.26008],[-6.5827,43.26584],[-6.5843,43.2722],[-6.58947,43.27424],[-6.5888,43.27677],[-6.59029,43.28146],[-6.59291,43.2837],[-6.59506,43.28917],[-6.60479,43.29223],[-6.61052,43.29274],[-6.61919,43.29184],[-6.62424,43.2948],[-6.63033,43.29693],[-6.63406,43.29935],[-6.63594,43.30254],[-6.6474,43.30257],[-6.65069,43.30474],[-6.65429,43.30562],[-6.65974,43.3057],[-6.66203,43.30717],[-6.66955,43.30893],[-6.67675,43.31193],[-6.67999,43.31458],[-6.68381,43.31514],[-6.68305,43.31938],[-6.67529,43.32696],[-6.67835,43.3308],[-6.67843,43.33227],[-6.67593,43.33846],[-6.67109,43.34381],[-6.66935,43.34796],[-6.67312,43.35198],[-6.67409,43.35527],[-6.67254,43.35828],[-6.66661,43.35995],[-6.66483,43.36368],[-6.66594,43.36726],[-6.67496,43.37057],[-6.68153,43.37202],[-6.68452,43.37459],[-6.69342,43.37452],[-6.69619,43.37207],[-6.70083,43.37019],[-6.70243,43.36768],[-6.70309,43.36369],[-6.70621,43.35979],[-6.70575,43.35575],[-6.70814,43.35261],[-6.71987,43.34378],[-6.72777,43.33353],[-6.73959,43.3254],[-6.74355,43.32043],[-6.75097,43.3183],[-6.75649,43.3183],[-6.75829,43.3165],[-6.76493,43.31416],[-6.77315,43.30793],[-6.77384,43.30573],[-6.77831,43.30153],[-6.78179,43.30084],[-6.78374,43.29811],[-6.78675,43.29623],[-6.79147,43.29033],[-6.79587,43.28806],[-6.80182,43.28614],[-6.81529,43.28396],[-6.82174,43.28135],[-6.82537,43.27877],[-6.83056,43.27649],[-6.83036,43.27365],[-6.83141,43.2682],[-6.83534,43.26227],[-6.84026,43.25882],[-6.84135,43.25404],[-6.84403,43.25053],[-6.84425,43.24846],[-6.84033,43.24837],[-6.8396,43.24586],[-6.84049,43.24147],[-6.84534,43.23707],[-6.84803,43.23643]],[[-6.61077,43.19816],[-6.61897,43.19938],[-6.61481,43.20506],[-6.61236,43.20505],[-6.60747,43.20049],[-6.61077,43.19816]],[[-6.59441,43.20824],[-6.59855,43.20937],[-6.60086,43.21105],[-6.5991,43.21391],[-6.59491,43.2167],[-6.59038,43.21508],[-6.59328,43.21357],[-6.59293,43.20881],[-6.59441,43.20824]]]},"properties":{"nombre":"Allande"}},
@@ -298,15 +329,16 @@
 
   const PUNTOS_POR_INTENTO = [3, 2, 1]; // índice 0 = primer intento, etc.
   const TOTAL_INTENTOS = 3;
-  const LS_KEY = "asturias-concejos-mejor-puntuacion";
+  function lsKey(modo) { return "asturias-concejos-mejor-puntuacion-" + modo; }
 
   const startScreen = document.getElementById("start-screen");
   const gameScreen = document.getElementById("game-screen");
   const endScreen = document.getElementById("end-screen");
-  const btnEmpezar = document.getElementById("btn-empezar");
+  const btnModoMapa = document.getElementById("btn-modo-mapa");
+  const btnModoNombre = document.getElementById("btn-modo-nombre");
   const btnRendirse = document.getElementById("btn-rendirse");
   const btnReiniciar = document.getElementById("btn-reiniciar");
-  const nombreActualEl = document.getElementById("nombre-actual");
+  const preguntaEl = document.getElementById("pregunta");
   const mensajeEl = document.getElementById("mensaje");
   const progresoEl = document.getElementById("progreso");
   const puntuacionEl = document.getElementById("puntuacion");
@@ -314,21 +346,24 @@
   const bestScoreEl = document.getElementById("best-score");
   const resultadoFinalEl = document.getElementById("resultado-final");
   const resumenListaEl = document.getElementById("resumen-lista");
+  const opcionesEl = document.getElementById("opciones-respuesta");
 
   let map, geoLayer, marcadoresCapitales;
   const layersByName = {};
 
+  let modoJuego = "mapa"; // "mapa" | "nombre"
   let orden = [];
   let idx = 0;
   let intentosRestantes = TOTAL_INTENTOS;
   let puntuacion = 0;
-  let respondido = false; // true mientras se muestra feedback y se espera "siguiente"
-  let resultados = []; // {nombre, puntos, intento}
+  let respondido = false; // true mientras se muestra feedback y se espera la siguiente ronda
+  let resultados = []; // {nombre, puntos, acierto, rendido}
 
   const estiloBase = { color: "#ffeb3b", weight: 1.5, fillColor: "#ffeb3b", fillOpacity: 0.08 };
   const estiloAcierto = { color: "#1b5e20", weight: 2, fillColor: "#4caf50", fillOpacity: 0.75 };
   const estiloFallo = { color: "#8e0000", weight: 2, fillColor: "#e53935", fillOpacity: 0.75 };
   const estiloRendido = { color: "#c98a00", weight: 2, fillColor: "#ffeb3b", fillOpacity: 0.75 };
+  const estiloPregunta = { color: "#00b8d4", weight: 3, fillColor: "#00e5ff", fillOpacity: 0.35 };
   const COLOR_ESTADO = { acierto: "#1b5e20", fallo: "#8e0000", rendido: "#c98a00" };
   const estadoConcejos = {}; // nombre -> "acierto" | "fallo" | "rendido", se conserva pintado durante toda la partida
 
@@ -340,8 +375,13 @@
   }
 
   function mostrarMejorPuntuacion() {
-    const mejor = localStorage.getItem(LS_KEY);
-    bestScoreEl.textContent = mejor ? "Mejor puntuación: " + mejor + " / " + (78 * 3) : "";
+    const maxPosible = 78 * 3;
+    const mejorMapa = localStorage.getItem(lsKey("mapa"));
+    const mejorNombre = localStorage.getItem(lsKey("nombre"));
+    let html = "";
+    if (mejorMapa) html += "Mejor en \"Señala en el mapa\": " + mejorMapa + " / " + maxPosible + "<br>";
+    if (mejorNombre) html += "Mejor en \"Adivina el nombre\": " + mejorNombre + " / " + maxPosible;
+    bestScoreEl.innerHTML = html;
   }
 
   function barajar(array) {
@@ -364,7 +404,9 @@
       onEachFeature: function (feature, layer) {
         const nombre = feature.properties.nombre;
         layersByName[nombre] = layer;
-        layer.on("click", function () { onClickConcejo(nombre, layer); });
+        layer.on("click", function () {
+          if (modoJuego === "mapa") intentarRespuesta(nombre, { tipo: "mapa", layer: layer });
+        });
       }
     }).addTo(map);
     marcadoresCapitales = L.layerGroup().addTo(map);
@@ -398,29 +440,73 @@
     }
   }
 
+  function generarOpciones(actual) {
+    const candidatos = barajar(CANDIDATOS_VECINOS[actual] || []);
+    const distractores = candidatos.slice(0, 3);
+    while (distractores.length < 3) {
+      const otro = orden[Math.floor(Math.random() * orden.length)];
+      if (otro !== actual && distractores.indexOf(otro) === -1) distractores.push(otro);
+    }
+    const opciones = barajar([actual].concat(distractores));
+    opcionesEl.innerHTML = "";
+    opciones.forEach(function (nombreOpcion) {
+      const btn = document.createElement("button");
+      btn.className = "btn-opcion";
+      btn.textContent = nombreOpcion;
+      btn.dataset.nombre = nombreOpcion;
+      btn.addEventListener("click", function () {
+        intentarRespuesta(nombreOpcion, { tipo: "boton", btnEl: btn });
+      });
+      opcionesEl.appendChild(btn);
+    });
+  }
+
+  function deshabilitarOpciones() {
+    opcionesEl.querySelectorAll(".btn-opcion").forEach(function (b) { b.disabled = true; });
+  }
+
+  function marcarBotonCorrecto(actual) {
+    const boton = opcionesEl.querySelector('.btn-opcion[data-nombre="' + CSS.escape(actual) + '"]');
+    if (boton) boton.classList.add("correcta");
+  }
+
   function iniciarRonda() {
     respondido = false;
     intentosRestantes = TOTAL_INTENTOS;
     const nombre = orden[idx];
-    nombreActualEl.textContent = nombre;
     progresoEl.textContent = "Concejo " + (idx + 1) + " / " + orden.length;
     puntuacionEl.textContent = "Puntos: " + puntuacion;
     mensajeEl.textContent = "";
     mensajeEl.className = "";
     actualizarIntentosUI();
+
+    if (modoJuego === "mapa") {
+      preguntaEl.innerHTML = "Busca: <span>" + nombre + "</span>";
+    } else {
+      preguntaEl.textContent = "¿Qué concejo se ha iluminado?";
+      const layer = layersByName[nombre];
+      if (layer) {
+        layer.setStyle(estiloPregunta);
+        map.fitBounds(layer.getBounds(), { padding: [40, 40], maxZoom: 13 });
+      }
+      generarOpciones(nombre);
+    }
   }
 
-  function onClickConcejo(nombre, layer) {
+  function intentarRespuesta(nombreElegido, origen) {
     if (respondido) return;
     const actual = orden[idx];
 
-    if (nombre === actual) {
+    if (nombreElegido === actual) {
       const puntos = PUNTOS_POR_INTENTO[TOTAL_INTENTOS - intentosRestantes];
       puntuacion += puntos;
       estadoConcejos[actual] = "acierto";
-      layer.setStyle(estiloAcierto);
+      const layerActual = layersByName[actual];
+      if (layerActual) layerActual.setStyle(estiloAcierto);
       mostrarCapital(actual, "acierto");
       mostrarNombreConcejo(actual, "acierto");
+      if (origen.tipo === "boton") origen.btnEl.classList.add("correcta");
+      deshabilitarOpciones();
       mensajeEl.textContent = "¡Correcto! +" + puntos + " puntos";
       mensajeEl.className = "acierto";
       puntuacionEl.textContent = "Puntos: " + puntuacion;
@@ -429,10 +515,17 @@
     } else {
       intentosRestantes--;
       actualizarIntentosUI();
-      layer.setStyle(estiloFallo);
-      setTimeout(function () {
-        if (layer.options.fillColor === estiloFallo.fillColor) layer.setStyle(estiloPersistido(nombre));
-      }, 450);
+
+      if (origen.tipo === "mapa") {
+        const layer = origen.layer;
+        layer.setStyle(estiloFallo);
+        setTimeout(function () {
+          if (layer.options.fillColor === estiloFallo.fillColor) layer.setStyle(estiloPersistido(nombreElegido));
+        }, 450);
+      } else {
+        origen.btnEl.classList.add("incorrecta");
+        origen.btnEl.disabled = true;
+      }
 
       if (intentosRestantes <= 0) {
         mensajeEl.textContent = "Sin más intentos. Era: " + actual;
@@ -442,6 +535,7 @@
         if (layerCorrecto) layerCorrecto.setStyle(estiloFallo);
         mostrarCapital(actual, "fallo");
         mostrarNombreConcejo(actual, "fallo");
+        if (modoJuego === "nombre") { marcarBotonCorrecto(actual); deshabilitarOpciones(); }
         resultados.push({ nombre: actual, puntos: 0, acierto: false });
         terminarRonda(1700);
       } else {
@@ -485,7 +579,10 @@
       resultados.push({ nombre: nombre, puntos: 0, acierto: false, rendido: true });
     });
 
-    nombreActualEl.textContent = "—";
+    opcionesEl.innerHTML = "";
+    opcionesEl.style.display = "none";
+    map.fitBounds(geoLayer.getBounds(), { padding: [10, 10] });
+    preguntaEl.textContent = "Partida rendida";
     mensajeEl.textContent = "Aquí tienes todos los concejos. Revisa el mapa y pulsa el botón cuando quieras ver tu puntuación.";
     mensajeEl.className = "revelado";
     btnRendirse.textContent = "Ver resultado final";
@@ -505,9 +602,9 @@
     const maxPosible = orden.length * 3;
     resultadoFinalEl.textContent = "Puntuación: " + puntuacion + " / " + maxPosible;
 
-    const mejorAnterior = parseInt(localStorage.getItem(LS_KEY) || "0", 10);
+    const mejorAnterior = parseInt(localStorage.getItem(lsKey(modoJuego)) || "0", 10);
     if (puntuacion > mejorAnterior) {
-      localStorage.setItem(LS_KEY, String(puntuacion));
+      localStorage.setItem(lsKey(modoJuego), String(puntuacion));
       resultadoFinalEl.textContent += "  ¡Nueva mejor puntuación!";
     }
 
@@ -524,7 +621,8 @@
       });
   }
 
-  function empezarPartida() {
+  function empezarPartida(modo) {
+    modoJuego = modo;
     idx = 0;
     puntuacion = 0;
     resultados = [];
@@ -534,17 +632,20 @@
     marcadoresCapitales.clearLayers();
     juegoRendido = false;
     btnRendirse.textContent = "Rendirse";
+    opcionesEl.innerHTML = "";
+    opcionesEl.style.display = modo === "nombre" ? "grid" : "none";
     startScreen.style.display = "none";
     endScreen.style.display = "none";
     gameScreen.style.display = "flex";
     setTimeout(function () {
       map.invalidateSize();
-      map.fitBounds(geoLayer.getBounds(), { padding: [10, 10] });
+      if (modo === "mapa") map.fitBounds(geoLayer.getBounds(), { padding: [10, 10] });
+      iniciarRonda();
     }, 50);
-    iniciarRonda();
   }
 
-  btnEmpezar.addEventListener("click", empezarPartida);
+  btnModoMapa.addEventListener("click", function () { empezarPartida("mapa"); });
+  btnModoNombre.addEventListener("click", function () { empezarPartida("nombre"); });
   btnRendirse.addEventListener("click", onClickBtnRendirse);
   btnReiniciar.addEventListener("click", function () {
     endScreen.style.display = "none";
