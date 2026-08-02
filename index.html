@@ -62,6 +62,7 @@
   }
   .btn-grande:active { transform: scale(0.96); }
   .btn-grande.btn-azul { background: var(--azul); margin-top: 10px; }
+  .btn-grande.btn-gris { background: #607d8b; margin-top: 10px; }
   .descripcion-modo { font-size: 0.95em; margin-top: 6px; color: #666; max-width: 380px; }
   #best-score {
     margin-top: 18px;
@@ -203,6 +204,9 @@
   .etiqueta-concejo-acierto { background: rgba(27,94,32,0.9); }
   .etiqueta-concejo-fallo { background: rgba(142,0,0,0.9); }
   .etiqueta-concejo-rendido { background: rgba(201,138,0,0.9); }
+  .etiqueta-concejo-estudio { background: rgba(21,101,192,0.85); font-weight: normal; font-size: 0.85em; }
+  #btn-volver-estudio { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.6); border-radius: 8px; padding: 5px 12px; font-size: 0.9em; cursor: pointer; }
+  #btn-volver-estudio:active { background: rgba(255,255,255,0.3); }
 </style>
 </head>
 <body>
@@ -213,7 +217,7 @@
   <button class="btn-grande" id="btn-dataset-concejos">Concejos de Asturias</button>
   <p class="descripcion-modo">78 concejos, con capitales.</p>
   <button class="btn-grande btn-azul" id="btn-dataset-parroquias">Parroquias de Gijón</button>
-  <p class="descripcion-modo">30 parroquias urbanas y rurales.</p>
+  <p class="descripcion-modo">22 parroquias urbanas y rurales.</p>
 </div>
 <div id="start-screen">
   <h1>¿Dónde está?</h1>
@@ -224,11 +228,14 @@
   <p class="descripcion-modo">Te decimos el nombre y tú lo buscas en el mapa.</p>
   <button class="btn-grande btn-azul" id="btn-modo-nombre">Adivina el nombre</button>
   <p class="descripcion-modo">Se ilumina un <span id="lbl-unidad-sing2">concejo</span> y eliges su nombre entre 4 opciones.</p>
+  <button class="btn-grande btn-gris" id="btn-estudiar">📖 Estudiar el mapa</button>
+  <p class="descripcion-modo">Mira el mapa completo con todos los nombres antes de jugar.</p>
   <p style="margin-top:18px"><a href="#" id="btn-cambiar-mapa" style="color:var(--azul)">← Cambiar mapa</a></p>
 </div>
 
 <div id="game-screen">
   <div id="topbar">
+    <button id="btn-volver-estudio" style="display:none">← Volver</button>
     <div class="progreso" id="progreso">Concejo 1 / 78</div>
     <div id="intentos"></div>
     <div class="puntuacion" id="puntuacion">Puntos: 0</div>
@@ -375,6 +382,8 @@
   const endScreen = document.getElementById("end-screen");
   const btnModoMapa = document.getElementById("btn-modo-mapa");
   const btnModoNombre = document.getElementById("btn-modo-nombre");
+  const btnEstudiar = document.getElementById("btn-estudiar");
+  const btnVolverEstudio = document.getElementById("btn-volver-estudio");
   const btnRendirse = document.getElementById("btn-rendirse");
   const btnReiniciar = document.getElementById("btn-reiniciar");
   const preguntaEl = document.getElementById("pregunta");
@@ -403,6 +412,7 @@
   const estiloFallo = { color: "#8e0000", weight: 2, fillColor: "#e53935", fillOpacity: 0.75 };
   const estiloRendido = { color: "#c98a00", weight: 2, fillColor: "#ffeb3b", fillOpacity: 0.75 };
   const estiloPregunta = { color: "#00b8d4", weight: 3, fillColor: "#00e5ff", fillOpacity: 0.35 };
+  const estiloEstudio = { color: "#1565c0", weight: 1.5, fillColor: "#64b5f6", fillOpacity: 0.35 };
   const COLOR_ESTADO = { acierto: "#1b5e20", fallo: "#8e0000", rendido: "#c98a00" };
   const estadoConcejos = {}; // nombre -> "acierto" | "fallo" | "rendido", se conserva pintado durante toda la partida
 
@@ -683,6 +693,38 @@
       });
   }
 
+  function iniciarEstudio() {
+    startScreen.style.display = "none";
+    gameScreen.style.display = "flex";
+    progresoEl.style.display = "none";
+    intentosEl.style.display = "none";
+    puntuacionEl.style.display = "none";
+    btnRendirse.style.display = "none";
+    btnVolverEstudio.style.display = "inline-block";
+    preguntaEl.style.display = "none";
+    mensajeEl.style.display = "none";
+    opcionesEl.style.display = "none";
+    opcionesEl.innerHTML = "";
+    marcadoresCapitales.clearLayers();
+    geoLayer.eachLayer(function (l) {
+      l.setStyle(estiloEstudio);
+      l.unbindTooltip();
+    });
+    for (const nombre in layersByName) {
+      layersByName[nombre].bindTooltip(nombre, { permanent: true, direction: "center", className: "etiqueta-concejo etiqueta-concejo-estudio" }).openTooltip();
+    }
+    setTimeout(function () {
+      map.invalidateSize();
+      map.fitBounds(geoLayer.getBounds(), { padding: [10, 10] });
+    }, 50);
+  }
+
+  function volverDesdeEstudio() {
+    gameScreen.style.display = "none";
+    startScreen.style.display = "flex";
+    geoLayer.eachLayer(function (l) { l.setStyle(estiloBase); l.unbindTooltip(); });
+  }
+
   function empezarPartida(modo) {
     modoJuego = modo;
     idx = 0;
@@ -694,6 +736,13 @@
     marcadoresCapitales.clearLayers();
     juegoRendido = false;
     btnRendirse.textContent = "Rendirse";
+    progresoEl.style.display = "";
+    intentosEl.style.display = "";
+    puntuacionEl.style.display = "";
+    btnRendirse.style.display = "";
+    btnVolverEstudio.style.display = "none";
+    preguntaEl.style.display = "";
+    mensajeEl.style.display = "";
     opcionesEl.innerHTML = "";
     opcionesEl.style.display = modo === "nombre" ? "grid" : "none";
     startScreen.style.display = "none";
@@ -708,6 +757,8 @@
 
   btnModoMapa.addEventListener("click", function () { empezarPartida("mapa"); });
   btnModoNombre.addEventListener("click", function () { empezarPartida("nombre"); });
+  btnEstudiar.addEventListener("click", iniciarEstudio);
+  btnVolverEstudio.addEventListener("click", volverDesdeEstudio);
   btnRendirse.addEventListener("click", onClickBtnRendirse);
   btnReiniciar.addEventListener("click", function () {
     endScreen.style.display = "none";
