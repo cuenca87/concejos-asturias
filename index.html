@@ -118,12 +118,12 @@
   .escudo-pregunta { display: block; margin: 4px auto 0; max-height: 90px; max-width: 80%; }
   .icono-escudo-estudio-wrap { background: none; border: none; }
   .icono-escudo-estudio {
-    width: 34px; height: 34px; object-fit: contain;
+    width: 56px; height: 56px; object-fit: contain;
     background: rgba(255,255,255,0.92);
     border-radius: 50%;
     border: 2px solid #1565c0;
     box-shadow: 0 1px 4px rgba(0,0,0,0.5);
-    padding: 2px;
+    padding: 3px;
   }
 
   #pista-container {
@@ -871,8 +871,8 @@
         const icono = L.divIcon({
           className: "icono-escudo-estudio-wrap",
           html: '<img class="icono-escudo-estudio" src="' + datasetActual.escudos[nombre] + '" alt="' + nombre + '">',
-          iconSize: [34, 34],
-          iconAnchor: [17, 17]
+          iconSize: [56, 56],
+          iconAnchor: [28, 28]
         });
         L.marker(centro, { icon: icono, interactive: false }).addTo(marcadoresEscudosEstudio);
       }
